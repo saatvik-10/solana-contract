@@ -1,4 +1,4 @@
-use borsh::{BorshDeserialize, BorshSerialize}
+use borsh::{BorshDeserialize, BorshSerialize};
 
 #[derive(BorshDeserialize, BorshSerialize, Debug)]
 pub enum CounterInstruction {
