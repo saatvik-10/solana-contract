@@ -1,4 +1,4 @@
-use borsh::BorshDeserialize;
+use borsh::{BorshDeserialize, BorshSerialize};
 use solana_contract::{instruction::CounterInstruction, process_instruction, state::Counter};
 use solana_program_test::*;
 use solana_sdk::{
@@ -52,6 +52,51 @@ async fn test_initialize_and_increment_counter() -> Result<(), TransportError> {
 
     //send the transaction to the rest validator and wait of the confirmation
     banks_client.process_transaction(transaction).await?;
+
+    //serialize the Initialize variant of your CounterInstruction enum
+    let initialize_data = borsh::to_vec(&CounterInstruction::Initialize).unwrap();
+
+    let initialize_instruction = solana_sdk::instruction::Instruction {
+        program_id,
+        accounts: vec![
+            solana_sdk::instruction::AccountMeta::new(counter_keypair.pubkey(), false),
+            solana_sdk::instruction::AccountMeta::new_readonly(payer.pubkey(), true),
+        ],
+        data: initialize_data,
+    };
+
+    //transaction for initialize instruction
+    let mut initialize_tx =
+        Transaction::new_with_payer(&[initialize_instruction], Some(&payer.pubkey()));
+
+    //sign trasaction
+    initialize_tx.sign(&[&payer], recent_blockhash);
+
+    //process transaction
+    banks_client.process_transaction(initialize_tx).await?;
+
+    //building increment instruction
+    //serialize the increment variant
+    let increment_data = borsh::to_vec(&CounterInstruction::Increment).unwrap();
+
+    let increment_instruction = solana_sdk::instruction::Instruction {
+        program_id,
+        accounts: vec![
+            solana_sdk::instruction::AccountMeta::new(counter_keypair.pubkey(), false),
+            solana_sdk::instruction::AccountMeta::new_readonly(payer.pubkey(), true),
+        ],
+        data: increment_data,
+    };
+
+    //build transaction for increment instruction
+    let mut increment_tx =
+        Transaction::new_with_payer(&[increment_instruction], Some(&payer.pubkey()));
+
+    //sign transaction
+    increment_tx.sign(&[&payer], recent_blockhash);
+
+    //process transaction
+    banks_client.process_transaction(increment_tx).await?;
 
     Ok(())
 }
