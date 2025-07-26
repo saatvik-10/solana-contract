@@ -1,5 +1,3 @@
-import * as borsh from 'borsh';
-
 export class Counter {
   //Matches Rust struct; holds your shared data
   value: number;
@@ -8,13 +6,9 @@ export class Counter {
   }
 }
 
-export const CounterSchema = new Map([
-  //Ensures Rust and TS read/write bytes identically
-  [
-    Counter,
-    {
-      kind: 'struct',
-      fields: [['value', 'u32']],
-    },
-  ],
-]);
+// Updated schema for newer Borsh versions
+export const CounterSchema = {
+  struct: {
+    value: 'u32',
+  },
+};
