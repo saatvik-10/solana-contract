@@ -7,6 +7,9 @@ edition = "2021"
 solana-program = "1.18.9"
 borsh = "1.5.7"
 borsh-derive = "1.5.7"
+solana-program-test = "1.18.9"
+solana-sdk = { version = "1.18.9", features = ["program"] }
+tokio = { version = "1.35", features = ["full"] }
 
 [lib]
 crate-type = ["cdylib", "lib"]

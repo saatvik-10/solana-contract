@@ -1,5 +1,5 @@
-mod instruction;
-mod state;
+pub mod instruction;
+pub mod state;
 use borsh::{BorshDeserialize, BorshSerialize};
 use instruction::CounterInstruction;
 use solana_program::entrypoint;
