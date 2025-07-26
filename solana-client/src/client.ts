@@ -1,6 +1,7 @@
 import * as web3 from '@solana/web3.js';
 import * as borsh from 'borsh';
-import { CounterSchema } from './counter';
+import { Counter, CounterSchema } from './counter';
+import { CounterInstruction } from './instruction';
 
 //deployed program ID
 const PROGRAM_ID = new web3.PublicKey(process.env.PROGRAM_ID!);
@@ -34,7 +35,7 @@ const rentLamports = await connection.getMinimumBalanceForRentExemption(space);
 Prepares a system program instruction to create and allocate the counterAccount.
 This account is owned by your program and sized for your counter struct.
  */
-const createAccountTx = new web3.Transaction().add(
+const createAccountIx = new web3.Transaction().add(
   web3.SystemProgram.createAccount({
     fromPubkey: payer.publicKey,
     newAccountPubkey: counterAccount.publicKey,
@@ -43,6 +44,8 @@ const createAccountTx = new web3.Transaction().add(
     programId: PROGRAM_ID,
   })
 );
+
+const createAccountTx = new web3.Transaction().add(createAccountIx);
 
 //send the transaction to create the counter account
 await web3.sendAndConfirmTransaction(
@@ -53,16 +56,40 @@ await web3.sendAndConfirmTransaction(
 );
 console.log(`Created counter account: ${counterAccount.publicKey.toBase58()}`);
 
+//instruction data buffers corresponding to your Rust enum tags
+const initializeInstructionData = Buffer.from([CounterInstruction.Initialize]);
+const incrementInstructionData = Buffer.from([CounterInstruction.Increment]);
+
 //initialize the counter account with a value of 0
-/*
-Normally the program initializes the account; here we send serialized data as instruction data or initialize from client (depending on your program)
-*/
-const counter = { value: 0 };
-const serializedCounter = Buffer.from(borsh.serialize(CounterSchema, counter));
+const initializeIx = new web3.TransactionInstruction({
+  keys: [
+    { pubkey: counterAccount.publicKey, isSigner: false, isWritable: true },
+    { pubkey: payer.publicKey, isSigner: true, isWritable: false },
+    {
+      pubkey: web3.SystemProgram.programId,
+      isSigner: false,
+      isWritable: false,
+    },
+  ],
+  programId: PROGRAM_ID,
+  data: initializeInstructionData, //data for initialize instruction
+});
+
+const initializeTx = new web3.Transaction().add(initializeIx);
+
+console.log('Sending initialize transaction...');
+
+await web3.sendAndConfirmTransaction(connection, initializeTx, [payer], {
+  commitment: 'confirmed',
+});
+
+console.log(
+  `Initialized counter account: ${counterAccount.publicKey.toBase58()}`
+);
 
 for (let i = 0; i < 4; i++) {
   //transaction instruction to call your program to increment the counter
-  const incrementInstruction = new web3.TransactionInstruction({
+  const incrementIx = new web3.TransactionInstruction({
     keys: [
       { pubkey: counterAccount.publicKey, isSigner: false, isWritable: true },
       {
@@ -74,13 +101,13 @@ for (let i = 0; i < 4; i++) {
         pubkey: web3.SystemProgram.programId,
         isSigner: false,
         isWritable: false,
-      }
+      },
     ],
     programId: PROGRAM_ID,
-    data: serializedCounter, //empty data for increment instruction
+    data: incrementInstructionData,
   });
 
-  const incrementTx = new web3.Transaction().add(incrementInstruction);
+  const incrementTx = new web3.Transaction().add(incrementIx);
 
   //send transaction calling your program to increment the counter
   await web3.sendAndConfirmTransaction(connection, incrementTx, [payer], {
@@ -104,4 +131,4 @@ const updatedCounter = borsh.deserialize(
   updatedAccountInfo.data
 ) as { value: number };
 
-console.log(`Updated counter value: ${updatedCounter?.value}`);
+console.log(`Updated counter value: ${updatedCounter.value}`);
