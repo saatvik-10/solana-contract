@@ -98,5 +98,20 @@ async fn test_initialize_and_increment_counter() -> Result<(), TransportError> {
     //process transaction
     banks_client.process_transaction(increment_tx).await?;
 
+    //counter account's stored data from the test chain
+    let account = banks_client
+        .get_account(counter_keypair.pubkey())
+        .await?
+        .expect("Counter account should exist");
+
+    //deserialize accounts's bytes back into counter struct
+    let counter_state = Counter::try_from_slice(&account.data).unwrap();
+
+    //assert that the counter is 1(initialized to 0, incrementer by 1)
+    assert_eq!(
+        counter_state.value, 1,
+        "Counter value should be 1 after increment"
+    );
+
     Ok(())
 }
